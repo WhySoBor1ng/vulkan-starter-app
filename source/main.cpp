@@ -17,7 +17,7 @@ namespace {
 constexpr int32_t default_window_width = 1280;
 constexpr int32_t default_window_height = 720;
 
-constexpr char default_window_title[] = "Vulkan Starter App";
+constexpr char default_window_title[] = "CG Lab 1 - Variant 5 - Sphere";
 
 GLFWwindow* glfw_window;
 
@@ -76,6 +76,10 @@ int main() {
 		const double time = glfwGetTime();
 
 		glfwPollEvents();
+		if (glfwGetWindowAttrib(glfw_window, GLFW_ICONIFIED)) {
+			glfwWaitEventsTimeout(0.05);
+			continue;
+		}
 		ImGui_ImplGlfw_NewFrame();
 
 		ImGui::NewFrame();
@@ -83,6 +87,10 @@ int main() {
 		ImGui::Render();
 
 		graphics::internal::FrameData fd = graphics::internal::prepare();
+		if (fd.command_buffer == VK_NULL_HANDLE) {
+			status = EXIT_FAILURE;
+			break;
+		}
 		application::render(fd);
 		graphics::internal::submitAndPresent();
 	}
@@ -99,5 +107,5 @@ err_imgui_init:
 err_null_window:
 	glfwTerminate();
 
-	return 0;
+	return status;
 }

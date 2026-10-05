@@ -3,7 +3,14 @@ include(FetchContent)
 
 project(vulkan-starter-app LANGUAGES C CXX)
 
-add_executable(${PROJECT_NAME} source/main.cpp source/graphics_internal.cpp source/application.cpp)
+add_executable(${PROJECT_NAME}
+	source/main.cpp
+	source/graphics_internal.cpp
+	source/application.cpp
+	source/geometry.cpp
+	source/graphics.cpp
+	source/graphics_pipeline.cpp
+)
 
 if(LINUX)
 	target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wno-missing-field-initializers)
@@ -48,6 +55,12 @@ FetchContent_Declare(
 	GIT_TAG v1.92.9
 )
 
+FetchContent_Declare(
+	glm
+	GIT_REPOSITORY https://github.com/g-truc/glm.git
+	GIT_TAG 1.0.3
+)
+
 find_package(Vulkan REQUIRED)
 
 set(GLFW_LIBRARY_TYPE STATIC)
@@ -60,6 +73,7 @@ FetchContent_MakeAvailable(
 	vk-bootstrap
 	VulkanMemoryAllocator
 	imgui
+	glm
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -67,7 +81,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 	Vulkan::Vulkan
 	vk-bootstrap::vk-bootstrap
 	GPUOpen::VulkanMemoryAllocator
+	glm::glm
 )
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE GLM_FORCE_DEPTH_ZERO_TO_ONE)
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends)
 target_sources(${PROJECT_NAME} PRIVATE
@@ -81,8 +98,11 @@ target_sources(${PROJECT_NAME} PRIVATE
 )
 
 # Compile shaders
-find_program(GLSLC_FOUND glslc)
-if(GLSLC_FOUND)
+set(GLSLC_EXECUTABLE "${Vulkan_GLSLC_EXECUTABLE}")
+if(NOT GLSLC_EXECUTABLE)
+	find_program(GLSLC_EXECUTABLE NAMES glslc)
+endif()
+if(GLSLC_EXECUTABLE)
 	set(_SHADER_BINARIES)
 
 	macro(compile_shader SHADER_FILE)
@@ -92,9 +112,10 @@ if(GLSLC_FOUND)
 
 		add_custom_command(
 			OUTPUT ${SHADER_BINARY_PATH}
-			COMMAND glslc ${SHADER_SOURCE} -o ${SHADER_BINARY_PATH}
-			DEPENDS ${SHADER_SOURCE}
+			COMMAND "${GLSLC_EXECUTABLE}" "${SHADER_SOURCE}" -o "${SHADER_BINARY_PATH}"
+			DEPENDS "${SHADER_SOURCE}"
 			COMMENT "Compiling ${SHADER_FILE} shader"
+			VERBATIM
 		)
 
 		list(APPEND _SHADER_BINARIES ${SHADER_BINARY_PATH})
@@ -103,9 +124,11 @@ if(GLSLC_FOUND)
 	# To compile shader file, use compile_shader function with a file name
 	# of a shader inside shaders directory. See example below:
 
-	# compile_shader(example.vert)
-	# compile_shader(example.frag)
+	compile_shader(sphere.vert)
+	compile_shader(sphere.frag)
 
 	add_custom_target(shaders DEPENDS ${_SHADER_BINARIES})
 	add_dependencies(${PROJECT_NAME} shaders)
+else()
+	message(FATAL_ERROR "glslc is required to compile the laboratory shaders. Install Vulkan SDK.")
 endif()
