@@ -17,7 +17,7 @@ namespace {
 constexpr int32_t default_window_width = 1280;
 constexpr int32_t default_window_height = 720;
 
-constexpr char default_window_title[] = "CG Lab 1 - Variant 5 - Sphere";
+constexpr char default_window_title[] = "CG Lab 2 - Variant 5 - Lighting";
 
 GLFWwindow* glfw_window;
 
@@ -83,7 +83,7 @@ int main() {
 		ImGui_ImplGlfw_NewFrame();
 
 		ImGui::NewFrame();
-		application::update(time);
+		application::update(time, glfw_window);
 		ImGui::Render();
 
 		graphics::internal::FrameData fd = graphics::internal::prepare();

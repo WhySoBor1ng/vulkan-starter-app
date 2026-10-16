@@ -47,6 +47,7 @@ struct PipelineDescription {
     const char *vertex_shader_path;
     const char *fragment_shader_path;
     VkPrimitiveTopology topology;
+    bool uses_normals_and_color = false;
 };
 
 bool create_pipeline(VkDevice device, VkRenderPass render_pass, VkPipelineLayout layout,
@@ -83,16 +84,28 @@ bool create_pipeline(VkDevice device, VkRenderPass render_pass, VkPipelineLayout
     vertex_binding.stride = sizeof(Vertex);
     vertex_binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    const VkVertexInputAttributeDescription attributes[] = {
-        {0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, position)},
-        {1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, color)},
-    };
+    VkVertexInputAttributeDescription attributes[3]{};
+
+    attributes[0].location = 0;
+    attributes[0].binding = 0;
+    attributes[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+    attributes[0].offset = offsetof(Vertex, position);
+
+    attributes[1].location = 1;
+    attributes[1].binding = 0;
+    attributes[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+    attributes[1].offset = offsetof(Vertex, normal);
+
+    attributes[2].location = 2;
+    attributes[2].binding = 0;
+    attributes[2].format = VK_FORMAT_R32G32B32_SFLOAT;
+    attributes[2].offset = offsetof(Vertex, color);
 
     VkPipelineVertexInputStateCreateInfo vertex_input{};
     vertex_input.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertex_input.vertexBindingDescriptionCount = 1;
     vertex_input.pVertexBindingDescriptions = &vertex_binding;
-    vertex_input.vertexAttributeDescriptionCount = 2;
+    vertex_input.vertexAttributeDescriptionCount = description.uses_normals_and_color ? 3 : 1;
     vertex_input.pVertexAttributeDescriptions = attributes;
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly{};
@@ -171,17 +184,33 @@ bool create_pipeline(VkDevice device, VkRenderPass render_pass, VkPipelineLayout
 
 bool create_pipelines(VkDevice device, VkRenderPass render_pass, VkPipelineLayout layout,
                       Pipelines &pipelines) {
-    const PipelineDescription sphere{
-        "shaders/sphere.vert.spv", "shaders/sphere.frag.spv", VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+    const PipelineDescription lit{
+        .vertex_shader_path = "shaders/lit.vert.spv",
+        .fragment_shader_path = "shaders/lit.frag.spv",
+        .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        .uses_normals_and_color = true,
     };
-    if (!create_pipeline(device, render_pass, layout, sphere, pipelines.sphere)) {
+    const PipelineDescription unlit{
+        .vertex_shader_path = "shaders/unlit.vert.spv",
+        .fragment_shader_path = "shaders/unlit.frag.spv",
+        .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+    };
+    PipelineDescription lines = unlit;
+    lines.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+
+    if (!create_pipeline(device, render_pass, layout, lit, pipelines.lit) ||
+        !create_pipeline(device, render_pass, layout, unlit, pipelines.unlit) ||
+        !create_pipeline(device, render_pass, layout, lines, pipelines.lines)) {
+        destroy_pipelines(device, pipelines);
         return false;
     }
     return true;
 }
 
 void destroy_pipelines(VkDevice device, Pipelines &pipelines) {
-    vkDestroyPipeline(device, pipelines.sphere, nullptr);
+    vkDestroyPipeline(device, pipelines.lit, nullptr);
+    vkDestroyPipeline(device, pipelines.unlit, nullptr);
+    vkDestroyPipeline(device, pipelines.lines, nullptr);
     pipelines = {};
 }
 

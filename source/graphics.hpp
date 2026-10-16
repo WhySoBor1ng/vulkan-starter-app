@@ -4,10 +4,11 @@
 #include "render_data.hpp"
 
 namespace graphics::core {
+
 bool initialize();
 void shutdown();
-bool upload_mesh(const MeshData &mesh);
+bool upload_mesh(MeshKind kind, const MeshData &mesh);
 VkRect2D viewportArea();
-void render(const internal::FrameData &fd, const glm::mat4 &view_projection,
-            const std::vector<RenderObject> &objects);
+void render(const internal::FrameData &frame_data, const RenderFrame &frame);
+
 }
